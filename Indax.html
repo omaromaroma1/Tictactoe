@@ -1,16 +1,16 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" dir="ltr">
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>Stacked Tic-Tac-Toe • Strong CPU</title>
+<title>Stacked Tic-Tac-Toe • CPU + Settings</title>
 <style>
   :root{
     --bg:#0e1226; --panel:#141a37; --x:#4dd0e1; --o:#f48fb1; --win:#76ff9f; --line:#2b356b; --text:#fff; --muted:#b8c0ff; --accent:#6ea8fe;
   }
   *{box-sizing:border-box}
   body{
-    margin:0; padding:20px; min-height:100svh; display:flex; flex-direction:column; align-items:center; gap:14px;
+    margin:0; padding:16px; min-height:100svh; display:flex; flex-direction:column; align-items:center; gap:12px;
     background:
       radial-gradient(1200px 700px at 110% 120%, #5b206055 0%, transparent 60%),
       radial-gradient(900px 500px at -10% -10%, #21307755 0%, transparent 60%),
@@ -18,8 +18,40 @@
     color:var(--text); font-family:system-ui, Segoe UI, Roboto, Inter, Arial, sans-serif;
   }
   h1{margin:6px 0 2px; font-size:20px; font-weight:800; letter-spacing:.3px}
+  .sub{ font-size:12px; color:#cfe2ffcc; margin-top:-6px }
 
-  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center }
+  /* Top-right gear */
+  .gear{
+    position:fixed; top:12px; right:12px; z-index:20; width:38px; height:38px; border-radius:12px;
+    display:grid; place-items:center; cursor:pointer; background:#1b224d; border:1px solid #2a3472;
+    box-shadow:0 8px 18px #0005, inset 0 1px 0 #ffffff12; transition:.15s ease;
+  }
+  .gear:hover{ transform:translateY(-1px); background:#223073 }
+  .gear svg{ width:20px; height:20px; fill:#cfe2ff }
+
+  /* Settings popup */
+  .settings{
+    position:fixed; top:56px; right:12px; z-index:25; width:280px; padding:14px; border-radius:14px;
+    background:#0f1636; border:1px solid #2a3472; box-shadow:0 16px 40px #0008; display:none;
+  }
+  .settings.open{ display:block; animation:pop .18s ease-out }
+  @keyframes pop{ from{ transform:translateY(-6px); opacity:0 } to{ transform:translateY(0); opacity:1 } }
+  .settings h3{ margin:0 0 10px; font-size:14px; color:#cfe2ff }
+  .settings .row{ display:flex; flex-direction:column; gap:6px; margin-bottom:10px }
+  .settings label{ font-size:13px; color:#bcd }
+  .settings input[type="text"], .settings select{
+    width:100%; padding:8px 10px; border-radius:10px; border:1px solid #34418b; background:#121b44; color:#eaf0ff;
+    outline:none;
+  }
+  .settings .actions{ display:flex; gap:8px; justify-content:flex-end }
+  .btn-small{
+    appearance:none; border:none; cursor:pointer; padding:8px 12px; border-radius:10px; color:#fff; font-weight:700;
+    background:#233070; border:1px solid #3340a0; transition:.15s ease;
+  }
+  .btn-small:hover{ transform:translateY(-1px); background:#2b3990 }
+
+  /* Toolbar */
+  .toolbar{ display:flex; gap:10px; flex-wrap:wrap; justify-content:center; align-items:center; margin-top:8px }
   .btn{
     appearance:none; border:none; cursor:pointer; user-select:none;
     padding:10px 14px; border-radius:12px; font-weight:700; color:var(--text);
@@ -29,6 +61,7 @@
   .btn:hover{ transform:translateY(-1px); background:#263173 }
   .btn:active{ transform:translateY(0) }
 
+  /* Size buttons */
   .sizeBtn{ position:relative; padding-left:46px }
   .sizeBtn::before{
     content:""; position:absolute; left:12px; top:50%; translate:0 -50%;
@@ -37,23 +70,18 @@
   .sizeBtn[data-size="small"]::before{ width:14px; height:14px }
   .sizeBtn[data-size="medium"]::before{ width:20px; height:20px }
   .sizeBtn[data-size="large"]::before{ width:28px; height:28px }
-
   .sizeBtn.selected{
-    outline:2px solid #ffffff35;
-    transform:translateY(-1px) scale(1.02);
-    background:linear-gradient(180deg,#24307a,#1f285e);
-    box-shadow:0 0 0 3px #6ea8fe44, 0 10px 30px #0008;
+    outline:2px solid #ffffff35; transform:translateY(-1px) scale(1.02);
+    background:linear-gradient(180deg,#24307a,#1f285e); box-shadow:0 0 0 3px #6ea8fe44, 0 10px 30px #0008;
   }
-  .sizeBtn.selected::before{
-    background:#6ea8fecc; border-color:#cfe2ff; box-shadow:0 0 10px #6ea8feaa;
-  }
+  .sizeBtn.selected::before{ background:#6ea8fecc; border-color:#cfe2ff; box-shadow:0 0 10px #6ea8feaa }
   .sizeBtn.selected::after{
-    content:"✓";
-    position:absolute; left:8px; top:-8px;
+    content:"✓"; position:absolute; left:8px; top:-8px;
     background:#6ea8fe; color:#081226; font-size:12px; font-weight:900;
     padding:2px 6px; border-radius:999px; box-shadow:0 6px 12px #0007;
   }
 
+  /* CPU switch + difficulty */
   .switch{
     display:inline-flex; align-items:center; gap:10px; padding:8px 12px; border-radius:999px;
     background:#141b3d; border:1px solid #27306a;
@@ -69,12 +97,27 @@
   }
   .switch input:checked + .toggle{ background:#2e7d32 }
   .switch input:checked + .toggle .knob{ left:25px; background:#b7ffd1 }
-  .switch label{ font-weight:700; color:#cde; }
+  .switch label{ font-weight:700; color:#cde }
+
+  .difficulty{ display:none; gap:6px; flex-wrap:wrap; align-items:center; justify-content:center }
+  .difficulty.show{ display:flex }
+  .pill{
+    padding:8px 12px; border-radius:999px; border:1px solid #31408f; background:#162055; color:#e8eeff; font-weight:700; cursor:pointer; transition:.15s;
+  }
+  .pill:hover{ transform:translateY(-1px); background:#1d2a6e }
+  .pill.active{ outline:2px solid #8fb3ff; box-shadow:0 0 0 2px #8fb3ff44 inset; background:#203079 }
+
+  /* CPU name badge */
+  .cpu-badge{
+    padding:6px 10px; border-radius:999px; background:#1a2458; border:1px solid #2c3a86; font-weight:800; color:#d7e5ff;
+    box-shadow:inset 0 1px 0 #ffffff18;
+  }
 
   .meta{ font-size:14px; color:var(--muted); text-align:center }
   .counter{ font-variant-numeric:tabular-nums }
   .info{ font-size:16px; font-weight:800; color:#e9ecff }
 
+  /* Board */
   .stage{ position:relative; width:min(92vw, 330px); aspect-ratio:1; margin:6px 0 }
   .board{
     position:absolute; inset:0; display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; padding:8px;
@@ -101,6 +144,7 @@
   .large{ width:80%; height:80%; z-index:3 }
   @keyframes drop{ from{ transform:translateY(-18px) scale(.7); opacity:0 } to{ transform:translateY(0) scale(1); opacity:1 } }
 
+  /* Win visuals */
   .cell.win{ border-color:var(--win) !important; animation:winPulse 1.35s ease-in-out infinite }
   @keyframes winPulse{
     0%{ box-shadow:0 0 0 0 #2ef0a520, inset 0 1px 0 #ffffff16 }
@@ -126,30 +170,68 @@
   }
   .sweep.diag1{ transform:rotate(45deg) translateY(-3px); transform-origin:left center }
   .sweep.diag2{ transform:rotate(-45deg) translateY(-3px); transform-origin:right center }
+
   @keyframes sweep{ from{ opacity:0; transform:scaleX(.1) } to{ opacity:.9; transform:scaleX(1) } }
+
+  /* Illegal blink */
+  @keyframes blink{0%{transform:translateY(0)}50%{transform:translateY(-2px)}100%{transform:translateY(0)}}
 
   .hidden{ display:none !important }
 </style>
 </head>
 <body>
-  <h1>Stacked Tic-Tac-Toe</h1>
+  <!-- Gear -->
+  <button id="gear" class="gear" aria-label="Settings">
+    <svg viewBox="0 0 24 24"><path d="M12 8.5a3.5 3.5 0 1 1 0 7 3.5 3.5 0 0 1 0-7Zm9.44 3.08-.96-.55a8.16 8.16 0 0 0 0-2.06l.96-.55a1 1 0 0 0 .37-1.36l-1.1-1.9a1 1 0 0 0-1.3-.43l-1.08.45c-.52-.4-1.08-.74-1.68-1.01l-.17-1.16A1 1 0 0 0 15.51 2h-2.2a1 1 0 0 0-.98.8l-.17 1.16c-.6.27-1.16.6-1.68 1l-1.08-.44a1 1 0 0 0-1.3.44l-1.1 1.9a1 1 0 0 0 .37 1.35l.96.56a8.16 8.16 0 0 0 0 2.05l-.96.55a1 1 0 0 0-.37 1.36l1.1 1.9a1 1 0 0 0 1.3.43l1.08-.44c.52.4 1.08.74 1.68 1.01l.17 1.16a1 1 0 0 0 .98.8h2.2a1 1 0 0 0 .98-.8l.17-1.16c.6-.27 1.16-.6 1.68-1l1.08.44a1 1 0 0 0 1.3-.44l1.1-1.9a1 1 0 0 0-.37-1.35Z"/></svg>
+  </button>
+  <div id="settings" class="settings" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+    <h3 id="settingsTitle">Settings</h3>
+    <div class="row">
+      <label for="cpuNameInput">CPU name</label>
+      <input id="cpuNameInput" type="text" placeholder="CPU" />
+    </div>
+    <div class="row">
+      <label for="langSelect">Language</label>
+      <select id="langSelect">
+        <option value="en">English</option>
+        <option value="ar">العربية</option>
+      </select>
+    </div>
+    <div class="actions">
+      <button id="closeSettings" class="btn-small">Close</button>
+      <button id="saveSettings" class="btn-small">Save</button>
+    </div>
+  </div>
 
-  <div class="toolbar">
-    <button class="btn sizeBtn" data-size="small" aria-pressed="false">Small</button>
-    <button class="btn sizeBtn" data-size="medium" aria-pressed="false">Medium</button>
-    <button class="btn sizeBtn" data-size="large" aria-pressed="false">Large</button>
+  <h1 id="title">Stacked Tic-Tac-Toe</h1>
+  <div class="sub" id="subtitle" aria-hidden="true"></div>
 
-    <label class="switch">
-      <label>Play vs CPU</label>
+  <div class="toolbar" id="sizesBar">
+    <button class="btn sizeBtn" data-size="small" aria-pressed="false" id="btnSmall">Small</button>
+    <button class="btn sizeBtn" data-size="medium" aria-pressed="false" id="btnMedium">Medium</button>
+    <button class="btn sizeBtn" data-size="large" aria-pressed="false" id="btnLarge">Large</button>
+
+    <label class="switch" id="cpuWrap">
+      <label id="cpuLabel">Play vs CPU</label>
       <input id="cpuToggle" type="checkbox" />
       <div class="toggle"><div class="knob"></div></div>
     </label>
 
-    <button id="restart" class="btn" title="Restart game">↻ Restart</button>
+    <span id="cpuBadge" class="cpu-badge" style="display:none;">CPU</span>
+
+    <button id="restart" class="btn" title="Restart game">↻ <span id="restartText">Restart</span></button>
   </div>
 
-  <div class="meta counter">X Pieces – S:3 M:3 L:2 | O Pieces – S:3 M:3 L:2</div>
-  <div class="meta info">Current turn: X</div>
+  <div class="toolbar difficulty" id="difficultyBar">
+    <span id="diffLabel" class="meta">Difficulty:</span>
+    <button class="pill active" data-diff="easy" id="diffEasy">Easy</button>
+    <button class="pill" data-diff="medium" id="diffMedium">Medium</button>
+    <button class="pill" data-diff="hard" id="diffHard">Hard</button>
+    <button class="pill" data-diff="impossible" id="diffImpossible">Impossible</button>
+  </div>
+
+  <div class="meta counter" id="counter">X Pieces – S:3 M:3 L:2 | O Pieces – S:3 M:3 L:2</div>
+  <div class="meta info" id="turnText">Current turn: X</div>
 
   <div class="stage">
     <div class="board" id="board"></div>
@@ -158,12 +240,87 @@
 
 <script>
 (() => {
+  /* ========= i18n ========= */
+  const I18N = {
+    en: {
+      title: "Stacked Tic-Tac-Toe",
+      vs: (name)=>`vs ${name}`,
+      small: "Small", medium: "Medium", large: "Large",
+      playCPU: "Play vs CPU", restart: "Restart", difficulty: "Difficulty:",
+      turn: (p)=>`Current turn: ${p}`, win: (p)=>`${p} wins!`,
+      settings: "Settings", cpuName: "CPU name", language: "Language",
+      save:"Save", close:"Close",
+      diff: {easy:"Easy", medium:"Medium", hard:"Hard", impossible:"Impossible"},
+      xPieces: "X Pieces", oPieces: (name)=>`${name} Pieces`
+    },
+    ar: {
+      title: "إكس-أو مع تكديس الأحجام",
+      vs: (name)=>`ضد ${name}`,
+      small: "صغير", medium: "متوسط", large: "كبير",
+      playCPU: "اللعب ضد الذكاء الاصطناعي",
+      restart: "إعادة البدء", difficulty: "الصعوبة:",
+      turn: (p)=>`الدور الحالي: ${p}`, win: (p)=>`${p} فاز!`,
+      settings: "الإعدادات", cpuName: "اسم الذكاء الاصطناعي", language: "اللغة",
+      save:"حفظ", close:"إغلاق",
+      diff: {easy:"سهل", medium:"متوسط", hard:"صعب", impossible:"مستحيل"},
+      xPieces: "قطع X", oPieces: (name)=>`قطع ${name}`
+    }
+  };
+  let lang = "en";
+  let cpuName = "CPU";
+
+  /* ========= DOM refs ========= */
   const boardEl = document.getElementById('board');
-  const info = document.querySelector('.info');
-  const counter = document.querySelector('.counter');
+  const infoEl = document.getElementById('turnText');
+  const counterEl = document.getElementById('counter');
   const winLine = document.getElementById('winLine');
   const cpuToggle = document.getElementById('cpuToggle');
+  const difficultyBar = document.getElementById('difficultyBar');
+  const cpuBadge = document.getElementById('cpuBadge');
+  const subtitle = document.getElementById('subtitle');
 
+  const gearBtn = document.getElementById('gear');
+  const settings = document.getElementById('settings');
+  const settingsTitle = document.getElementById('settingsTitle');
+  const cpuNameInput = document.getElementById('cpuNameInput');
+  const langSelect = document.getElementById('langSelect');
+  const saveSettings = document.getElementById('saveSettings');
+  const closeSettings = document.getElementById('closeSettings');
+
+  const titleEl = document.getElementById('title');
+  const btnSmall = document.getElementById('btnSmall');
+  const btnMedium = document.getElementById('btnMedium');
+  const btnLarge = document.getElementById('btnLarge');
+  const cpuLabel = document.getElementById('cpuLabel');
+  const restartBtn = document.getElementById('restart');
+  const restartText = document.getElementById('restartText');
+  const diffLabel = document.getElementById('diffLabel');
+
+  const diffButtons = {
+    easy: document.getElementById('diffEasy'),
+    medium: document.getElementById('diffMedium'),
+    hard: document.getElementById('diffHard'),
+    impossible: document.getElementById('diffImpossible')
+  };
+
+  /* ========= helpers (selection & feedback) ========= */
+  let selectedSize = null;
+  const sizeBtns = document.querySelectorAll('.sizeBtn');
+
+  function selectSize(size){
+    selectedSize = size;
+    sizeBtns.forEach(b=>{
+      const on = b.dataset.size === size;
+      b.classList.toggle('selected', on);
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
+  function illegalBlink(cell){
+    cell.style.animation = 'blink .18s linear';
+    setTimeout(()=> cell.style.animation = '', 220);
+  }
+
+  /* ========= Game State ========= */
   const LINES = [
     [0,1,2],[3,4,5],[6,7,8],
     [0,3,6],[1,4,7],[2,5,8],
@@ -171,9 +328,10 @@
   ];
   const PRIORITY = [4,0,2,6,8,1,3,5,7]; // center, corners, edges
 
-  let currentPlayer, selectedSize, pieces, stacks, gameOver, vsCpu, cpuThinking;
+  let currentPlayer, pieces, stacks, gameOver, vsCpu, cpuThinking;
+  let difficulty = 'easy'; // easy | medium | hard | impossible
 
-  // Build board
+  // Build board cells
   for (let i=0;i<9;i++){
     const cell = document.createElement('div');
     cell.className = 'cell';
@@ -183,31 +341,68 @@
     boardEl.appendChild(cell);
   }
 
-  // Size selection UI
-  const sizeBtns = document.querySelectorAll('.sizeBtn');
+  // Size selection buttons
   sizeBtns.forEach(btn=>{
+    btn.addEventListener('click', ()=> selectSize(btn.dataset.size));
+  });
+
+  // CPU toggle & difficulty
+  cpuToggle.addEventListener('change', ()=>{
+    vsCpu = cpuToggle.checked;
+    difficultyBar.classList.toggle('show', vsCpu);
+    updateCpuBadge();
+    applyLang();
+    resetGame('X');
+  });
+  Object.entries(diffButtons).forEach(([key,btn])=>{
     btn.addEventListener('click', ()=>{
-      selectedSize = btn.dataset.size;
-      sizeBtns.forEach(b=>{
-        b.classList.remove('selected');
-        b.setAttribute('aria-pressed','false');
-      });
-      btn.classList.add('selected');
-      btn.setAttribute('aria-pressed','true');
+      Object.values(diffButtons).forEach(b=>b.classList.remove('active'));
+      btn.classList.add('active');
+      difficulty = key;
+
+      // auto-hide menu after choosing difficulty
+      difficultyBar.classList.remove('show');
+
+      maybeCpuTurn();
     });
   });
 
-  cpuToggle.addEventListener('change', ()=>{
-    vsCpu = cpuToggle.checked;
-    resetGame('X');
-  });
-  document.getElementById('restart').addEventListener('click', ()=>resetGame(currentPlayer));
+  function updateCpuBadge(){
+    cpuBadge.textContent = cpuName;
+    cpuBadge.style.display = vsCpu ? "inline-block" : "none";
+  }
 
-  // Helpers
+  // Restart
+  restartBtn.addEventListener('click', ()=>resetGame(currentPlayer));
+
+  // Settings popup
+  gearBtn.addEventListener('click', ()=>{
+    settings.classList.toggle('open');
+    cpuNameInput.value = cpuName;
+    langSelect.value = lang;
+  });
+  closeSettings.addEventListener('click', ()=>settings.classList.remove('open'));
+  saveSettings.addEventListener('click', ()=>{
+    cpuName = (cpuNameInput.value || "CPU").trim();
+    lang = langSelect.value || 'en';
+    settings.classList.remove('open');
+    applyLang(); // updates title, badge, counter, turn text
+  });
+
+  // Logic helpers
   const sizeVal = s => ({small:1, medium:2, large:3}[s]);
   const sizesAsc = ['small','medium','large'];
-  const sizesDesc = ['large','medium','small'];
-
+  const firstAvailableSize = (player)=>{
+    if (pieces[player].small > 0) return 'small';
+    if (pieces[player].medium > 0) return 'medium';
+    if (pieces[player].large > 0) return 'large';
+    return null;
+  };
+  const bumpIfDepleted = ()=>{
+    if (!selectedSize || pieces[currentPlayer][selectedSize] > 0) return;
+    const s = firstAvailableSize(currentPlayer);
+    if (s) selectSize(s);
+  };
   const top = idx => {
     const cell = boardEl.children[idx];
     const stack = JSON.parse(cell.dataset.stack);
@@ -218,45 +413,54 @@
     const t = top(idx);
     return !t || sizeVal(size) > sizeVal(t.size);
   };
-  const listLegalMoves = (player) => {
-    const res = [];
-    for (let i=0;i<9;i++){
-      const t = top(i);
-      for (const sz of sizesAsc){ // prefer smaller that works for search branching
-        if (pieces[player][sz] > 0 && (!t || sizeVal(sz) > sizeVal(t.size))) {
-          res.push({idx:i, size:sz});
-        }
-      }
-    }
-    // Move ordering: winning first, then blocking, then positional (center/corners/edges)
-    res.sort((a,b)=> moveScore(b)-moveScore(a));
-    return res;
-  };
-  const moveScore = (m)=>{
-    // Heuristic: center/corner bias + ability to win or block ASAP
-    let s = 0;
-    if (m.idx === 4) s += 4;
-    if ([0,2,6,8].includes(m.idx)) s += 2;
-    if ([1,3,5,7].includes(m.idx)) s += 1;
-    s += sizeVal(m.size)*0.1; // tiny tiebreak
-    return s;
-  };
 
-  const updateCounter = () => {
-    counter.textContent =
-      `X Pieces – S:${pieces.X.small} M:${pieces.X.medium} L:${pieces.X.large} | ` +
-      `O Pieces – S:${pieces.O.small} M:${pieces.O.medium} L:${pieces.O.large}`;
-  };
-  const setTurnText = () => info.textContent = gameOver ? info.textContent : `Current turn: ${currentPlayer}`;
+  function updateCounter(){
+    const L = I18N[lang];
+    const oLabel = vsCpu ? L.oPieces(cpuName) : "O Pieces";
+    counterEl.textContent =
+      `${L.xPieces} – S:${pieces.X.small} M:${pieces.X.medium} L:${pieces.X.large} | ` +
+      `${oLabel} – S:${pieces.O.small} M:${pieces.O.medium} L:${pieces.O.large}`;
+  }
+  function setTurnText(){
+    const L = I18N[lang];
+    const name = (vsCpu && currentPlayer==='O') ? `${cpuName} (O)` : currentPlayer;
+    infoEl.textContent = gameOver ? infoEl.textContent : L.turn(name);
+  }
+  function applyLang(){
+    const L = I18N[lang];
+    titleEl.textContent = L.title;
+    subtitle.textContent = (vsCpu ? L.vs(cpuName) : "");
+    subtitle.style.display = vsCpu ? "block" : "none";
+
+    btnSmall.textContent = L.small;
+    btnMedium.textContent = L.medium;
+    btnLarge.textContent = L.large;
+    cpuLabel.textContent = L.playCPU;
+    restartText.textContent = L.restart;
+    diffLabel.textContent = L.difficulty;
+    settingsTitle.textContent = L.settings;
+    settings.querySelector('label[for="cpuNameInput"]').textContent = L.cpuName;
+    settings.querySelector('label[for="langSelect"]').textContent = L.language;
+    saveSettings.textContent = L.save;
+    closeSettings.textContent = L.close;
+    diffButtons.easy.textContent = L.diff.easy;
+    diffButtons.medium.textContent = L.diff.medium;
+    diffButtons.hard.textContent = L.diff.hard;
+    diffButtons.impossible.textContent = L.diff.impossible;
+
+    document.documentElement.lang = lang;
+    document.documentElement.dir = (lang === 'ar') ? 'rtl' : 'ltr';
+    updateCounter();
+    setTurnText();
+    updateCpuBadge();
+  }
 
   function resetGame(starter='X'){
     currentPlayer = starter;
-    selectedSize = null;
     pieces = { X:{small:3, medium:3, large:2}, O:{small:3, medium:3, large:2} };
     stacks = Array.from({length:9}, ()=>[]);
     gameOver = false;
     cpuThinking = false;
-    vsCpu = cpuToggle.checked;
 
     sizeBtns.forEach(b=>{ b.classList.remove('selected'); b.setAttribute('aria-pressed','false'); });
     boardEl.querySelectorAll('.cell').forEach(c=>{
@@ -269,6 +473,10 @@
 
     updateCounter();
     setTurnText();
+
+    // Auto-select a valid size for X (so you can play immediately)
+    selectSize(firstAvailableSize('X') || 'small');
+
     maybeCpuTurn();
   }
 
@@ -277,12 +485,23 @@
 
     const humanTurn = !(vsCpu && currentPlayer === 'O');
     if(!humanTurn) return;
-    if(!selectedSize) return;
-    if(pieces[currentPlayer][selectedSize] <= 0) return;
-    if(!legal(currentPlayer, idx, selectedSize)) return;
+
+    // Ensure valid size; auto-pick if missing or depleted
+    if (!selectedSize) selectSize(firstAvailableSize(currentPlayer));
+    bumpIfDepleted();
+
+    if (!selectedSize || pieces[currentPlayer][selectedSize] <= 0){
+      illegalBlink(boardEl.children[idx]);
+      return;
+    }
+    if(!legal(currentPlayer, idx, selectedSize)){
+      illegalBlink(boardEl.children[idx]);
+      return;
+    }
 
     placePiece(idx, currentPlayer, selectedSize);
     pieces[currentPlayer][selectedSize]--;
+    bumpIfDepleted();
     afterMove();
   }
 
@@ -296,18 +515,6 @@
     stack.push({player, size});
     cell.dataset.stack = JSON.stringify(stack);
     stacks[idx] = stack;
-  }
-
-  function removePiece(idx){
-    // for search undo (UI not used)
-    const cell = boardEl.children[idx];
-    const stack = JSON.parse(cell.dataset.stack);
-    stack.pop();
-    cell.dataset.stack = JSON.stringify(stack);
-    stacks[idx] = stack;
-    // remove last child piece if exists (during UI play we never undo, so not needed visually)
-    const piecesInCell = cell.querySelectorAll('.piece');
-    if (piecesInCell.length) piecesInCell[piecesInCell.length-1].remove();
   }
 
   function afterMove(){
@@ -337,7 +544,9 @@
 
   function endGame(player, line){
     gameOver = true;
-    info.textContent = `${player} wins!`;
+    const L = I18N[lang];
+    const name = (vsCpu && player==='O') ? cpuName : player;
+    infoEl.textContent = L.win(name);
     boardEl.querySelectorAll('.cell').forEach(c=>c.classList.add('disabled'));
     line.forEach(i=>boardEl.children[i].classList.add('win'));
     drawSweep(line);
@@ -371,37 +580,74 @@
     }
     winLine.appendChild(bar);
   }
-  function sameLine(a,b){ return a.length===b.length && a.every((v,i)=>v===b[i]); }
+  const sameLine = (a,b)=> a.length===b.length && a.every((v,i)=>v===b[i]);
 
-  /* ===================== STRONG CPU (MINIMAX + ALPHA-BETA) ===================== */
+  /* ===================== CPU ===================== */
   async function maybeCpuTurn(){
     if (!vsCpu || gameOver || currentPlayer !== 'O') return;
     cpuThinking = true;
-    // tiny delay for UX
-    await new Promise(r=>setTimeout(r, 220));
+    await delay(220);
 
-    // 1) Immediate tactical: win now
-    const winNow = findImmediateWin('O');
-    if (winNow){ doCpuMove(winNow); return; }
+    const move =
+      (difficulty==='easy')       ? cpuEasy() :
+      (difficulty==='medium')     ? cpuMedium() :
+      (difficulty==='hard')       ? cpuSearch(4) :
+                                    cpuSearch(8); // impossible
 
-    // 2) Immediate tactical: block X now
-    const blockNow = findImmediateWin('X', /*asBlockFor*/'O');
-    if (blockNow){ doCpuMove(blockNow); return; }
-
-    // 3) Deep search (depth 6 is strong & snappy; you can push to 7/8 if you want slower but stronger)
-    const best = searchBestMove(6); // even depth for full-ply parity
-    doCpuMove(best ?? fallbackMove());
-  }
-
-  function doCpuMove(move){
-    if(!move){ cpuThinking=false; return; }
-    placePiece(move.idx, 'O', move.size);
-    pieces.O[move.size]--;
-    afterMove();
+    if (move){
+      placePiece(move.idx, 'O', move.size);
+      pieces.O[move.size]--;
+      afterMove();
+    }
     cpuThinking = false;
   }
 
-  function findImmediateWin(player, asBlockFor=null){
+  // EASY: random legal move (smallest size that fits)
+  function cpuEasy(){
+    const moves = [];
+    for (let i=0;i<9;i++){
+      const sz = smallestLegal('O', i);
+      if (sz) moves.push({idx:i, size:sz});
+    }
+    if (!moves.length) return null;
+    return moves[Math.floor(Math.random()*moves.length)];
+  }
+
+  // MEDIUM: win → block → center/corners/edges with adaptive smallest size
+  function cpuMedium(){
+    const win = immediateWin('O'); if (win) return win;
+    const block = immediateWin('X', 'O'); if (block) return block;
+    for (const i of PRIORITY){
+      const sz = smallestLegal('O', i);
+      if (sz) return {idx:i, size:sz};
+    }
+    return null;
+  }
+
+  // HARD/IMPOSSIBLE: alpha-beta search with heuristics
+  function cpuSearch(depth){
+    const state = snapshot();
+    let best = null; let bestVal = -Infinity;
+
+    const moves = orderedMoves('O', state);
+    for (const m of moves){
+      const next = copyState(state);
+      applyTo(m, next);
+      const val = -negamax(next, depth-1, -Infinity, Infinity, 'X');
+      if (val > bestVal){ bestVal = val; best = m; }
+    }
+    return best ?? cpuMedium();
+  }
+
+  /* ——— Tactical helpers ——— */
+  function smallestLegal(player, idx){
+    const t = top(idx);
+    for (const sz of sizesAsc){
+      if (pieces[player][sz] > 0 && (!t || sizeVal(sz) > sizeVal(t.size))) return sz;
+    }
+    return null;
+  }
+  function immediateWin(player, asBlockFor=null){
     const me = asBlockFor ?? player;
     for (const line of LINES){
       const owners = line.map(topOwner);
@@ -415,7 +661,6 @@
     }
     return null;
   }
-
   function wouldOwnLineAfter(player, idx, size, line){
     const simOwners = line.map(i=>{
       if (i !== idx) return topOwner(i);
@@ -426,42 +671,31 @@
     return simOwners[0] && simOwners.every(o=>o===simOwners[0] && o===player);
   }
 
-  function smallestLegal(player, idx){
-    const t = top(idx);
-    for (const sz of sizesAsc){
-      if (pieces[player][sz] > 0 && (!t || sizeVal(sz) > sizeVal(t.size))) return sz;
-    }
-    return null;
+  /* ——— Search state ——— */
+  function snapshot(){
+    return {
+      tops: Array.from({length:9}, (_,i)=> {
+        const t = top(i);
+        return t ? {player:t.player, size:t.size} : null;
+      }),
+      pieces: { X:{...pieces.X}, O:{...pieces.O} }
+    };
   }
-
-  function fallbackMove(){
-    // center -> corners -> edges, with smallest legal size
-    for (const idx of PRIORITY){
-      const sz = smallestLegal('O', idx);
-      if (sz) return {idx, size:sz};
-    }
-    // else none
-    return null;
+  function copyState(s){
+    return {
+      tops: s.tops.map(t=> t?{player:t.player,size:t.size}:null),
+      pieces: { X:{...s.pieces.X}, O:{...s.pieces.O} }
+    };
   }
-
-  function cloneCounts(obj){ return {small:obj.small, medium:obj.medium, large:obj.large}; }
-
-  function searchBestMove(maxDepth){
-    // alpha-beta minimax
-    const state = snapshot();
-    let best = null; let bestVal = -Infinity;
-    const moves = orderedMoves('O', state);
-    for (const m of moves){
-      apply(m, state);
-      const val = -negamax(state, maxDepth-1, -Infinity, Infinity, 'X');
-      undo(m, state);
-      if (val > bestVal){ bestVal = val; best = m; }
+  function applyTo(m, state){
+    const t = state.tops[m.idx];
+    if (!t || sizeVal(m.size) > sizeVal(t.size)) {
+      state.tops[m.idx] = {player:m.player, size:m.size};
     }
-    return best;
+    state.pieces[m.player][m.size]--;
   }
 
   function orderedMoves(player, state){
-    // Generate & order by tactical value
     const moves = [];
     for (let i=0;i<9;i++){
       const t = state.tops[i];
@@ -471,7 +705,7 @@
         }
       }
     }
-    // Sort: winning first, then blocking, then center/corners, then smaller size
+    // Winning > blocking > center/corners/edges > smaller size first
     moves.sort((a,b)=>{
       const aw = wouldWinMove(a,state)?1:0, bw = wouldWinMove(b,state)?1:0;
       if (aw!==bw) return bw-aw;
@@ -486,82 +720,45 @@
   }
 
   function wouldWinMove(m, state){
-    // simulate only line check
-    const owners = (line)=> line.map(i=>{
-      if (i!==m.idx) return state.tops[i]?state.tops[i].player:null;
-      const t = state.tops[i];
-      const newTop = (!t || sizeVal(m.size) > sizeVal(t.size)) ? m.player : (t ? t.player : null);
-      return newTop;
-    });
     for (const line of LINES){
-      const o = owners(line);
-      if (o[0] && o[0]===o[1] && o[0]===o[2]) return true;
+      const owners = line.map(i=>{
+        if (i!==m.idx) return state.tops[i]?state.tops[i].player:null;
+        const t = state.tops[i];
+        const newTop = (!t || sizeVal(m.size) > sizeVal(t.size)) ? m.player : (t ? t.player : null);
+        return newTop;
+      });
+      if (owners[0] && owners[0]===owners[1] && owners[0]===owners[2]) return true;
     }
     return false;
   }
   function wouldBlockMove(m, state){
     const opp = m.player==='O'?'X':'O';
-    // If opponent could win *without* m, and with m they can't, then it's a block
-    // Quick: check any line where opp has 2, we place on a square of that line and stop the triple
     for (const line of LINES){
-      const oNow = line.map(i=> state.tops[i]?state.tops[i].player:null );
-      if (oNow.filter(x=>x===opp).length===2 && line.includes(m.idx)) return true;
+      const owners = line.map(i=> state.tops[i]?state.tops[i].player:null );
+      if (owners.filter(x=>x===opp).length===2 && line.includes(m.idx)) return true;
     }
     return false;
   }
 
-  function snapshot(){
-    return {
-      tops: Array.from({length:9}, (_,i)=> {
-        const t = top(i);
-        return t ? {player:t.player, size:t.size} : null;
-      }),
-      pieces: { X:cloneCounts(pieces.X), O:cloneCounts(pieces.O) }
-    };
-  }
-
-  function apply(m, state){
-    // modify state only (search), not DOM
-    const t = state.tops[m.idx];
-    state.tops[m.idx] = (!t || sizeVal(m.size) > sizeVal(t.size)) ? {player:m.player, size:m.size} : t;
-    state.pieces[m.player][m.size]--;
-  }
-
-  function undo(m, state){
-    // To undo, we need to know prior top. Keep small stack for tops history.
-    // Easiest: recompute tops from real DOM stacks? We can't in search.
-    // So store previous value inside move.
-    // (Wrap orderedMoves→apply with snapshotting per move)
-  }
-
-  // To keep undo simple & safe, we’ll copy state objects per recursion (small state => cheap enough here)
-  function copyState(s){
-    return {
-      tops: s.tops.map(t=> t?{player:t.player,size:t.size}:null),
-      pieces: { X:cloneCounts(s.pieces.X), O:cloneCounts(s.pieces.O) }
-    };
-  }
-
   function negamax(state, depth, alpha, beta, player){
-    const winEval = winnerFromTops(state.tops);
-    if (winEval!==0) return winEval*(depth+10); // win sooner is better
+    const winScore = winnerFromTops(state.tops);
+    if (winScore!==0) return winScore*(depth+10);
     if (depth===0 || noMoves(state, player)) return evaluate(state);
 
     let best = -Infinity;
     const moves = orderedMoves(player, state);
     for (const m of moves){
       const next = copyState(state);
-      apply(m, next);
+      applyTo(m, next);
       const val = -negamax(next, depth-1, -beta, -alpha, player==='X'?'O':'X');
       if (val > best) best = val;
       if (best > alpha) alpha = best;
-      if (alpha >= beta) break; // prune
+      if (alpha >= beta) break;
     }
     return best;
   }
 
   function winnerFromTops(tops){
-    // +1000 if O (CPU) wins, -1000 if X wins, else 0
     for (const line of LINES){
       const [a,b,c] = line.map(i=> tops[i]?tops[i].player:null);
       if (a && a===b && a===c){
@@ -570,7 +767,6 @@
     }
     return 0;
   }
-
   function noMoves(state, player){
     for (let i=0;i<9;i++){
       const t = state.tops[i];
@@ -580,20 +776,17 @@
     }
     return true;
   }
-
   function evaluate(state){
-    // Heuristic: controlled lines, threats, center/corner control, mobility, piece economy.
+    // Line potentials + center/corners + mobility + piece economy
     let score = 0;
 
-    // Line potentials
     for (const line of LINES){
       const cells = line.map(i=> state.tops[i]);
       const owners = cells.map(t=> t?t.player:null);
       const oCount = owners.filter(o=>o==='O').length;
-      const xCount = owners.filter(o=>o==='X').length;
+    const xCount = owners.filter(o=>o==='X').length;
 
       if (oCount>0 && xCount===0){
-        // more valuable with bigger tops & more cells
         const sizeBoost = cells.reduce((s,t)=> s + (t && t.player==='O' ? sizeVal(t.size) : 0), 0);
         score += [0,5,25,120][oCount] + sizeBoost*0.8;
       } else if (xCount>0 && oCount===0){
@@ -602,7 +795,6 @@
       }
     }
 
-    // Center/corners control
     const center = state.tops[4];
     if (center){ score += (center.player==='O'?8:-8); }
     for (const c of [0,2,6,8]){
@@ -610,17 +802,14 @@
       if (t) score += (t.player==='O'?3:-3);
     }
 
-    // Mobility (how many legal moves remain)
     const mobO = countMoves(state,'O'), mobX = countMoves(state,'X');
     score += (mobO - mobX)*0.4;
 
-    // Piece economy (keep larges if possible)
     const econ = (p)=> p.small + p.medium*1.2 + p.large*2.0;
     score += (econ(state.pieces.O) - econ(state.pieces.X))*0.3;
 
     return score;
   }
-
   function countMoves(state, player){
     let c=0;
     for (let i=0;i<9;i++){
@@ -632,7 +821,11 @@
     return c;
   }
 
-  // init
+  const delay = ms => new Promise(res=>setTimeout(res, ms));
+
+  /* ========= Init ========= */
+  applyLang();
+  difficultyBar.classList.remove('show'); // hidden until CPU mode on
   resetGame('X');
 })();
 </script>
